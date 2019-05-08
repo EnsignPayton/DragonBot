@@ -1,17 +1,28 @@
 ﻿using System;
+using System.Reflection;
 using System.Threading.Tasks;
+using CommonServiceLocator;
 using Discord;
+using Discord.Commands;
 using Discord.WebSocket;
+using Microsoft.Extensions.Logging;
 
 namespace DragonBot
 {
     public class Service : IDisposable
     {
-        private readonly DiscordSocketClient _client;
+        private const char MessagePrefix = '!';
 
-        public Service(DiscordSocketClient client)
+        private readonly ILogger _logger;
+        private readonly DiscordSocketClient _client;
+        private readonly CommandService _commandService;
+
+        public Service(ILogger<Service> logger, DiscordSocketClient client, CommandService commandService)
         {
+            _logger = logger;
             _client = client;
+            _commandService = commandService;
+
             _client.Log += Client_Log;
             _client.Ready += Client_Ready;
             _client.MessageReceived += Client_MessageReceived;
@@ -21,6 +32,7 @@ namespace DragonBot
         {
             await _client.LoginAsync(TokenType.Bot, token);
             await _client.StartAsync();
+            await _commandService.AddModulesAsync(Assembly.GetEntryAssembly(), ServiceLocator.Current);
         }
 
         public async Task StopAsync()
@@ -36,20 +48,28 @@ namespace DragonBot
 
         private Task Client_Log(LogMessage message)
         {
-            return Console.Out.WriteLineAsync(message.ToString());
+            _logger.Log(message);
+            return Task.CompletedTask;
         }
 
         private Task Client_Ready()
         {
-            return Console.Out.WriteLineAsync($"Connected with User {_client.CurrentUser.Username}");
+            _logger.LogInformation($"Connected with User {_client.CurrentUser.Username}");
+            return Task.CompletedTask;
         }
 
         private async Task Client_MessageReceived(SocketMessage message)
         {
-            if (message.Author.Id == _client.CurrentUser.Id) return;
+            if (!(message is SocketUserMessage userMessage)) return;
+            if (message.Source != MessageSource.User) return;
 
-            await Console.Out.WriteLineAsync(message.ToString());
-            await Task.CompletedTask;
+            _logger.LogDebug($"Received Message: {message}");
+
+            var argPos = 0;
+            if (!userMessage.HasCharPrefix(MessagePrefix, ref argPos)) return;
+
+            var context = new SocketCommandContext(_client, userMessage);
+            await _commandService.ExecuteAsync(context, argPos, ServiceLocator.Current);
         }
     }
 }

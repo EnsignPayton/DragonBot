@@ -7,7 +7,15 @@
 
   <ItemGroup>
     <PackageReference Include="Discord.Net" Version="2.0.1" />
-    <PackageReference Include="DragonStallion.Common" Version="1.0.0" />
+    <PackageReference Include="DragonStallion.Common" Version="0.1.1" />
+    <PackageReference Include="Topshelf" Version="4.2.0" />
+    <PackageReference Include="Topshelf.NLog" Version="4.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="nlog.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

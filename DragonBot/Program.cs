@@ -1,32 +1,47 @@
 ﻿using System;
-using System.Threading.Tasks;
 using CommonServiceLocator;
+using Discord.Commands;
 using Discord.WebSocket;
-using DragonStallion.Common.ServiceLocation;
+using DragonStallion.Common.DependencyInjection;
+using Topshelf;
 
 namespace DragonBot
 {
     internal static class Program
     {
-        private static async Task Main()
+        private static int Main()
         {
+            var logger = NLog.LogManager.GetCurrentClassLogger();
             var serviceLocator = BuildServiceLocator();
-            var service = serviceLocator.GetInstance<Service>();
+            var token = Environment.GetEnvironmentVariable("DISCORD_TOKEN");
 
-            await service.StartAsync(Environment.GetEnvironmentVariable("DISCORD_TOKEN"));
-
-            // Wait for escape
-            while (Console.ReadKey().Key != ConsoleKey.Escape)
+            return (int) HostFactory.Run(x =>
             {
-            }
+                x.Service<Service>(s =>
+                {
+                    s.ConstructUsing(_ => serviceLocator.GetInstance<Service>());
+                    s.WhenStarted(async t => await t.StartAsync(token));
+                    s.WhenStopped(async t => await t.StopAsync());
+                });
 
-            await service.StopAsync();
-            service.Dispose();
+                x.SetServiceName("DragonStallion.DragonBot");
+                x.SetDisplayName("Dragon Bot");
+                x.SetDescription("Dragon Discord Bot");
+
+                x.UseNLog();
+
+                x.OnException(ex =>
+                {
+                    logger.Error("Unhandled Exception");
+                    logger.Error(ex);
+                });
+            });
         }
 
         private static IServiceLocator BuildServiceLocator() =>
             new ServiceLocatorFactory()
                 .WithAssemblyTypes(typeof(DiscordSocketClient))
+                .WithSingletonTypes(typeof(CommandService), typeof(Random))
                 .Build();
     }
 }
