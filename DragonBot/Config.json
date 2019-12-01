@@ -1,0 +1,5 @@
+{
+  "DiscordToken": "", 
+  "MessagePrefix": "!",
+  "GreetingFile": "PM_Hello.ogg"
+}

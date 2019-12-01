@@ -1,19 +1,28 @@
 ﻿using System;
+using System.Threading.Tasks;
 using CommonServiceLocator;
 using Discord.Commands;
 using Discord.WebSocket;
-using DragonStallion.Common.DependencyInjection;
+using DragonBot.Media;
+using DragonBot.Utilities;
 using Topshelf;
 
 namespace DragonBot
 {
     internal static class Program
     {
-        private static int Main()
+        private static async Task<int> Main()
         {
             var logger = NLog.LogManager.GetCurrentClassLogger();
             var serviceLocator = BuildServiceLocator();
             var token = Environment.GetEnvironmentVariable("DISCORD_TOKEN");
+
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                var configProvider = serviceLocator.GetInstance<IConfigProvider<DragonBotConfig>>();
+                var config = await configProvider.GetConfigAsync();
+                token = config.DiscordToken;
+            }
 
             return (int) HostFactory.Run(x =>
             {
@@ -21,7 +30,17 @@ namespace DragonBot
                 {
                     s.ConstructUsing(_ => serviceLocator.GetInstance<Service>());
                     s.WhenStarted(async t => await t.StartAsync(token));
-                    s.WhenStopped(async t => await t.StopAsync());
+                    s.WhenStopped(async t =>
+                    {
+                        try
+                        {
+                            await t.StopAsync();
+                        }
+                        catch (ObjectDisposedException ex)
+                        {
+                            logger.Warn("Problem stopping service: " + ex);
+                        }
+                    });
                 });
 
                 x.SetServiceName("DragonStallion.DragonBot");
@@ -32,8 +51,7 @@ namespace DragonBot
 
                 x.OnException(ex =>
                 {
-                    logger.Error("Unhandled Exception");
-                    logger.Error(ex);
+                    logger.Error("Unhandled Exception: " + ex);
                 });
             });
         }
@@ -41,7 +59,14 @@ namespace DragonBot
         private static IServiceLocator BuildServiceLocator() =>
             new ServiceLocatorFactory()
                 .WithAssemblyTypes(typeof(DiscordSocketClient))
-                .WithSingletonTypes(typeof(CommandService), typeof(Random))
+                .WithSingletonTypes(
+                    typeof(CommandService),
+                    typeof(Random),
+                    typeof(Service),
+                    typeof(MediaService),
+                    typeof(GreeterService),
+                    typeof(MediaFileService),
+                    typeof(FileConfigProvider<DragonBotConfig>))
                 .Build();
     }
 }

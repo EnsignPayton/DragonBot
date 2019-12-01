@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
+using DragonBot.Utilities;
 
 namespace DragonBot.Modules
 {
@@ -12,6 +13,8 @@ namespace DragonBot.Modules
     {
         private static readonly Regex WhitespaceRegex = new Regex(@"\s+");
         public Random Random { get; set; }
+
+        #region Commands
 
         [Command("roll")]
         public Task RollAsync([Remainder] string text)
@@ -25,8 +28,27 @@ namespace DragonBot.Modules
             return SendEmbedAsync(x => x
                 .WithColor(Color.Purple)
                 .WithTitle($"{Context.User.Username} rolled {rolls.Sum()}")
-                .WithDescription($"`{string.Join(" + ", rolls)} -> {rolls.Sum()}`"));
+                .WithDescription($"{string.Join(" + ", rolls)} -> {rolls.Sum()}".ToCodeBlock()));
         }
+
+        [Command("range")]
+        public Task RangeAsync([Remainder] string text)
+        {
+            var parts = WhitespaceRegex
+                .Replace(text, string.Empty)
+                .Split('-')
+                .ToList();
+
+            var min = int.Parse(parts[0]);
+            var max = int.Parse(parts[1]);
+            var result = Random.Next(min, max + 1);
+
+            return SendEmbedAsync(x => x
+                .WithColor(Color.Blue)
+                .WithTitle($"{Context.User.Username} rolled `{result}`"));
+        }
+
+        #endregion
 
         private IEnumerable<int> GetRolls(string die)
         {
@@ -45,23 +67,6 @@ namespace DragonBot.Modules
             {
                 yield return int.Parse(die);
             }
-        }
-
-        [Command("range")]
-        public Task RangeAsync([Remainder] string text)
-        {
-            var parts = WhitespaceRegex
-                .Replace(text, string.Empty)
-                .Split('-')
-                .ToList();
-
-            var min = int.Parse(parts[0]);
-            var max = int.Parse(parts[1]);
-            var result = Random.Next(min, max + 1);
-
-            return SendEmbedAsync(x => x
-                .WithColor(Color.Blue)
-                .WithTitle($"{Context.User.Username} rolled {result}"));
         }
     }
 }

@@ -2,7 +2,7 @@
 using Discord;
 using Microsoft.Extensions.Logging;
 
-namespace DragonBot
+namespace DragonBot.Utilities
 {
     public static class LoggerExtensions
     {
