@@ -2,12 +2,12 @@
 
 Yet another Discord bot
 
-## Setup
+## Requirements
 
-You'll need the .NET Core SDK 2.2 installed. Also, you'll need to either host `DragonStallion.Common` yourself or configure your nuget to pull from my package feed at https://www.myget.org/F/dragon-stallion/api/v3/index.json
-
-For now, start it with the environmental variable `DISCORD_TOKEN` set to your bot token. I'll probably use this as an opportunity to learn how to set up a .NET Core app as a Linux daemon, so token loading may change depending on whatever's most convenient for that use case.
+* .NET Core SDK 3.1
+* A discord bot token, provided through either `Config.json` or the environmental variable `DISCORD_TOKEN`.
+* Windows. NAudio doesn't appear to be cross-platform, and we have some Windows binaries committed for voice support. Full cross-platform support is not impossible by any means, but this project isn't set up for it at the moment and probably won't be while Windows 10 is my daily driver.
 
 ## What Does It Do?
 
-Not much yet. Just a simple tool to generate some random numbers and display the result in a fancy way.
+At this point, it's basically a soundboard. You place media files in the directory it's configured to scan, and it will play them in a voice channel.
