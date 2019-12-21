@@ -10,6 +10,9 @@ namespace DragonBot.Media
 {
     public class GuildMediaPlayer : IAsyncDisposable, IDisposable
     {
+        private const int SampleRate = 48000;
+        private const int BitDepth = 16;
+
         private readonly MediaFileService _mediaFileService;
         private readonly IAudioClient _audioClient;
 
@@ -42,13 +45,29 @@ namespace DragonBot.Media
 
         private async Task PlayThroughNAudioAsync(string file)
         {
-            await using var fileReader = new VorbisWaveReader(file);
+            await using var fileReader = GetFileReader(file);
 
-            var waveFormat = new WaveFormat(48000, 16, fileReader.WaveFormat.Channels);
-            using var resampler = new MediaFoundationResampler(fileReader, waveFormat);
-            await using var facade = new StreamFacade(resampler);
+            if (fileReader.WaveFormat.SampleRate != SampleRate ||
+                fileReader.WaveFormat.BitsPerSample != BitDepth)
+            {
+                var waveFormat = new WaveFormat(SampleRate, BitDepth, fileReader.WaveFormat.Channels);
+                using var resampler = new MediaFoundationResampler(fileReader, waveFormat);
+                await using var facade = new StreamFacade(resampler);
+                await PlayStreamAsync(facade);
+            }
+            else
+            {
+                await PlayStreamAsync(fileReader);
+            }
+        }
 
-            await PlayStreamAsync(facade);
+        private WaveStream GetFileReader(string file)
+        {
+            var ext = Path.GetExtension(file);
+            if (ext.Contains("ogg", StringComparison.OrdinalIgnoreCase))
+                return new VorbisWaveReader(file);
+            else
+                return new AudioFileReader(file);
         }
 
         private async Task PlayStreamAsync(Stream stream)
